@@ -1,13 +1,13 @@
-type BasicRBC
+workspace()
+type BasicRBC{T <: Real}
     aalpha::Float64
     bbeta::Float64
-    vProductivity
-    mTransition
+    vProductivity::Matrix{T}
+    mTransition::Matrix{T}
     capitalSteadyState::Float64
     outputSteadyState::Float64
     consumptionSteadyState::Float64
-    vGridCapital
-    
+    vGridCapital::Vector{T}
 end
 
 function BasicRBC(;aalpha = 1/3,
