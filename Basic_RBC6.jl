@@ -44,8 +44,6 @@ _unpack(p::BasicRBC) = (p.α,p.β,p.k_grid,p.z,p.T )
 
 
 #====================================#
-# m : length of GridProductivity(z)
-# n : length of GridCapital(k_grid)
 # i : nProductivity
 # j : nCapital
 # l : nCapitalNextPeriod
@@ -56,11 +54,16 @@ _unpack(p::BasicRBC) = (p.α,p.β,p.k_grid,p.z,p.T )
 # kNext : gridCapitalNextPeriod
 #====================================#
 
-function mainloop(p::BasicRBC,output,f_value,f_valueN,f_policy,E)
+function bellman_operator!(p::BasicRBC,
+                           output::Matrix,
+                           f_value::Matrix,
+                           f_valueN::Matrix,
+                           f_policy::Matrix,
+                           E::Matrix)
     
-    α,β,k_grid,z =_unpack(p)    
+    α,β,k_grid,z =_unpack(p)
     n = length(k_grid)
-    m = length(z)
+    m = length(z)    
     #-----------------------------------------------------------------
     for i = 1:m
     # We start from previous choice (monotonicity of policy function)
@@ -71,7 +74,7 @@ function mainloop(p::BasicRBC,output,f_value,f_valueN,f_policy,E)
                 for l = kNext : n
                     c = output[j,i]-k_grid[l]
                     v = (1-β)*log(c)+β*E[l,i]
-                    if (v>v_max)
+                    if v > v_max
                         v_max = v
                         k_choice = k_grid[l]
                         kNext = l
@@ -119,9 +122,9 @@ function main()
         tol = 0.0000001
         iter = 0
         #-----------------------------------------------------------------
-        while(error > tol)
+        while error > tol
             E = f_value*T';
-            mainloop(p,output,f_value,f_valueN,f_policy,E)
+            bellman_operator!(p ,Matrix(output),Matrix(f_value),Matrix(f_valueN),Matrix(f_policy),Matrix(E))
             error  = maximum(abs.(f_valueN - f_value))
             f_value    = f_valueN
             f_valueN = zeros(n,m)
