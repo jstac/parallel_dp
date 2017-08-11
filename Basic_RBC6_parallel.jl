@@ -62,14 +62,14 @@ end
     n = length(k_grid)
     m = length(z)
     cc=[]
-    f=[0 0 0 0]
+    f=Array{Tuple{Float64,Float64,Int64,Int64}}(1,n)
     #-----------------------------------------------------------------
     for i = 1:m
     # We start from previous ichoice (monotonicity of policy function)
         kNext = 1
         v_max = 0.0
         k_choice = 0.0
-        cc = @parallel (vcat) for j = 1:n
+        cc = @parallel (hcat) for j = 1:n
             v_max = -1000.0
             k_choice  = k_grid[1]
             for l = kNext : n
@@ -81,16 +81,14 @@ end
                         kNext = l
                     else
                         break # We break when we have achieved the max
-                    end
-                                 
+                    end                       
             end
-            [v_max k_choice j i]
-                
+            (v_max,k_choice,j,i)     
         end
-        f=vcat(f,cc)
+        f=vcat(f,cc)       
     end
+    f = f[setdiff(1:end, 1), :]
     #-----------------------------------------------------------------
-    
     return f
 end
 
@@ -119,6 +117,7 @@ function main()
         f_value  = zeros(n,m)
         f_valueN = zeros(n,m)
         f_policy = zeros(n,m)
+        func = zeros(6,n)
         E = SharedArray{Float64,2}(n,m)
         output = (k_grid.^α)*z;
         #-----------------------------------------------------------------
@@ -128,15 +127,16 @@ function main()
         #-----------------------------------------------------------------
         while error > tol
             E = f_value*T';
-            f = bellman_operator!(p , output,E)
-            (x,y)=size(f)
-            for k=2:x
-                j = Int(f[2x+k])
-                i = Int(f[3x+k])
-                f_valueN[j,i] = f[k]
-                f_policy[j,i] = f[x+k]
+            func = bellman_operator!(p , output,E)
+            (x,y)=size(func)  
+            #.............................................................
+            for kk=1 : x*y
+                j=func[kk][3]
+                i=func[kk][4]
+                f_valueN[j,i] = func[kk][1]
+                f_policy[j,i] = func[kk][2]
             end
-            
+            #.............................................................
             error  = maximum(abs.(f_valueN - f_value))
             f_value    = f_valueN
             f_valueN = zeros(n,m)
